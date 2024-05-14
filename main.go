@@ -113,7 +113,7 @@ func main() {
 
 func defVarForWin() {
 	if detectOS() == "windows" {
-		keyDir = "%appdata%\\.ykey"
+		keyDir = "C:\\ProgramData\\ykey\\"
 		privateKeyLoc = keyDir + "ykey.pri"
 		publicKeyLoc = keyDir + "ykey.pub"
 	}
