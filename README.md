@@ -35,7 +35,7 @@ chmod +x installer
 
 ## Generate a new key pair:
 
-    ykey create
+    ykey create (force)
 
 ## Create a signature for a file:
 
@@ -43,7 +43,7 @@ chmod +x installer
 
 ## Verify the authenticity of a file:
 
-    ykey verify myfile.txt
+    ykey verify myfile.txt (YKey hash) (Issuers public key)
 
 ## Regenerate keys with a custom encryption word:
 
