@@ -39,6 +39,7 @@ func main() {
     |  |     |  .  \  |  |____    |  |     
     |__|     |__|\__\ |_______|   |__|`)
 	time.Sleep(1 * time.Second)
+	defVarForWin()
 	args := os.Args[1:]
 	if len(args) == 0 {
 		fmt.Println("Usage: ykey <create, createsig, verify, regen>")
@@ -107,6 +108,14 @@ func main() {
 	default:
 		fmt.Println("Unknown command:", command)
 		fmt.Println("Usage: ykey <create, createsig, verify, regen>")
+	}
+}
+
+func defVarForWin() {
+	if detectOS() == "windows" {
+		keyDir = "%appdata%\\.ykey"
+		privateKeyLoc = keyDir + "ykey.pri"
+		publicKeyLoc = keyDir + "ykey.pub"
 	}
 }
 
