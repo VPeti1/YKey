@@ -14,7 +14,10 @@ import (
 	"io/ioutil"
 	"log"
 	"math/big"
+	"net"
 	"os"
+	"runtime"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/pbkdf2"
@@ -154,12 +157,31 @@ func createKeyPair(force bool) {
 			return
 		}
 	}
-	// Read machine ID from /etc/machine-id
-	machineID, err := ioutil.ReadFile("/etc/machine-id")
-	if err != nil {
-		fmt.Println("Error reading machine ID:", err)
-		return
+
+	var machineID []byte
+
+	if detectOS() == "linux" {
+		// Read machine ID from /etc/machine-id
+		machineIDl, err := ioutil.ReadFile("/etc/machine-id")
+		if err != nil {
+			fmt.Println("Error reading machine ID:", err)
+			return
+		}
+		machineID = machineIDl
+	} else {
+		interfaces, err := net.Interfaces()
+		if err != nil {
+			return
+		}
+
+		for _, intf := range interfaces {
+			if intf.Flags&net.FlagLoopback == 0 && intf.HardwareAddr != nil {
+				machineIDw := strings.Replace(intf.HardwareAddr.String(), ":", "", -1)
+				machineID = []byte(machineIDw)
+			}
+		}
 	}
+
 	// Hash machine ID
 	machineIDHash := sha256.Sum256(machineID)
 	publicKeyHash := hex.EncodeToString(machineIDHash[:])
@@ -322,6 +344,13 @@ func verifyFile(filename string, args ...string) {
 
 		}
 	}
+}
+
+func detectOS() string {
+	if runtime.GOOS == "linux" {
+		return "linux"
+	}
+	return "windows"
 }
 
 func regenerateKey(encword string) {
