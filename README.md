@@ -1,59 +1,44 @@
 # YKey
 
-YKey is a command-line tool for generating and managing encryption keys, creating file signatures, encrypting and decrypting files, and verifying file authenticity
+YKey is a command-line tool for key generation, file signing, verification, encryption, and decryption using AES encryption and HMAC-SHA256 signatures
 
-# Installation
-## Download the installer or compile it yourself
-## Make it executable
-chmod +x installer
-## Run it
-./installer
+## Usage
 
-# Syntax
-    create: Generates a new pair of public and private keys.
-        Usage: ykey create
-    createsig: Creates a signature for a specified file.
-        Usage: ykey createsig <filename>
-    verify: Verifies the authenticity of a file using its signature.
-        Usage: ykey verify <filename> [<ykey hash> <issuer's public key>]
-    regen: Regenerates keys. You can choose to use a custom encryption word or not.
-        Usage: ykey regen [<encryption word>]
-    encrypt: Encrypts a file using the generated private key.
-        Usage: ykey encrypt <filename>
-    decrypt: Decrypts a previously encrypted file using the private key.
-        Usage: ykey decrypt <filename> <private key>
+    ykey generate 
+    ykey sign <file> 
+    ykey verify <filepath> <filesigpath> 
+    ykey encrypt <filename> 
+    ykey decrypt <filename>
 
-# Features
+## Commands
 
-    Key Generation: Easily generate a pair of public and private keys for encryption and decryption.
-    File Signing: Create a signature for a file to ensure its authenticity.
-    File Encryption: Encrypt files using the generated private key for secure storage or transmission.
-    File Decryption: Decrypt previously encrypted files using the private key.
-    Verification: Verify the authenticity of a file by checking its signature against the provided key.
+    generate: Generates cryptographic keys and saves them securely.
+    sign <file>: Signs a specified file using HMAC-SHA256.
+    verify <filepath> <filesigpath>: Verifies the signature of a file.
+    encrypt <filename>: Encrypts a file using AES encryption.
+    decrypt <filename>: Decrypts a file previously encrypted with YKey.
 
-# Examples
+## Security Considerations
 
-## Generate a new key pair:
+    Password Security: Always use strong passwords for key operations.
+    File Integrity: Ensure files are not tampered with by verifying signatures.
+    Key Management: Safeguard generated keys (private.key and public.key).
 
-    ykey create (force)
+## How Signing Works:
 
-## Create a signature for a file:
+Key Pair: A digital signature uses a private-public key pair:
+        Private Key: Known only to the signer, it creates the signature, encrypts and decryps.
+        Public Key: Available publicly, it verifies the signature.
 
-    ykey createsig myfile.txt
+### Verification:
+Recipients use the sender's public key to decrypt the signature and obtain the original hash.
+They hash the received data to get a new hash value.
+        If both hashes match, the data is authentic and unchanged.
 
-## Verify the authenticity of a file:
+## Why Signing Cannot Be Reversed:
 
-    ykey verify myfile.txt (YKey hash) (Issuers public key)
+One-Way Hashing: The hash function irreversibly converts data into a fixed-size hash. It's computationally impractical to derive the original data from the hash.
 
-## Regenerate keys with a custom encryption word:
+Private Key Security: Only the signer's private key can create a valid signature. Without it, forging or reversing the signature is extremely difficult.
 
-    ykey regen mycustomword
-
-## Encrypt a file:
-
-    ykey encrypt myfile.txt
-
-## Decrypt a file:
-
-    ykey decrypt myfile.txt myprivatekey
-
+Cryptographic Strength: Modern signing algorithms are designed with strong encryption methods, ensuring that even with computational power, reversing the process without the private key is virtually impossible.
