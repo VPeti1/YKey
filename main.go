@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
@@ -114,14 +115,12 @@ func generateKeys() (string, string, error) {
 		return "", "", fmt.Errorf("error encrypting private key: %v", err)
 	}
 
+	writeFile(keyDir, "passwd.hash", CreateSHA256String(password))
+
 	return hex.EncodeToString(encryptedPrivateKey), hex.EncodeToString(publicKey[:]), nil
 }
 
 func saveKeys(encryptedPrivateKey string, publicKey string) error {
-	if err := os.MkdirAll(keyDir, 0700); err != nil {
-		return fmt.Errorf("error creating key directory: %v", err)
-	}
-
 	// Save private key
 	privateKeyPath := filepath.Join(keyDir, "private.key")
 	if err := ioutil.WriteFile(privateKeyPath, []byte(encryptedPrivateKey), 0600); err != nil {
@@ -188,7 +187,7 @@ func signFile(filePath string, privateKey string) (string, error) {
 	}
 
 	// Decrypt private key with password
-	decryptedPrivateKey, err := decrypt(privateKeyBytes, getPassword())
+	decryptedPrivateKey, err := decrypt(privateKeyBytes, getPassword(true))
 	if err != nil {
 		return "", fmt.Errorf("error decrypting private key: %v", err)
 	}
@@ -232,13 +231,28 @@ func verifyFileSignature(filePath, fileSigPath string, publicKey string) (bool, 
 	return hmac.Equal(expectedSignatureBytes, expectedSignature), nil
 }
 
-func getPassword() string {
+func getPassword(check bool) string {
 	fmt.Print("Enter password: ")
 	password, err := gopass.GetPasswdMasked()
 	if err != nil {
 		fmt.Println("Error reading password:", err)
 		os.Exit(1)
 	}
+
+	if check {
+		filePath := filepath.Join(keyDir, "passwd.hash")
+		hashed, err := readFile(filePath)
+		if err != nil {
+			fmt.Println("Error reading password:", err)
+			os.Exit(1)
+		}
+		passwordgood := verifyPassword(string(password), hashed)
+		if !passwordgood {
+			fmt.Println("Bad Password")
+			os.Exit(1)
+		}
+	}
+
 	return string(password)
 }
 
@@ -250,7 +264,7 @@ func main() {
 		fmt.Println("Commands:")
 		fmt.Println("  generate")
 		fmt.Println("  sign <file>")
-		fmt.Println("  verify <filepath> <filesigpath>")
+		fmt.Println("  verify <filepath> <filesigpath> <publickeypath>")
 		fmt.Println("  encrypt <filepath>")
 		fmt.Println("  decrypt <filepath>")
 		return
@@ -265,6 +279,11 @@ func main() {
 		if ykeyDirExists() {
 			fmt.Println("You have already generated the keys! If you want to regenerate them run 'ykey regen'")
 			return
+		} else {
+			if err := os.MkdirAll(keyDir, 0700); err != nil {
+				fmt.Printf("error creating key directory: %v", err)
+				return
+			}
 		}
 		privateKey, publicKey, err := generateKeys()
 		if err != nil {
@@ -287,6 +306,10 @@ func main() {
 		err := os.RemoveAll(keyDir)
 		if err != nil {
 			fmt.Printf("Error deleting directory %s: %v\n", keyDir, err)
+			return
+		}
+		if err := os.MkdirAll(keyDir, 0700); err != nil {
+			fmt.Printf("error creating key directory: %v", err)
 			return
 		}
 		privateKey, publicKey, err := generateKeys()
@@ -336,15 +359,15 @@ func main() {
 		fmt.Println("File signed successfully. Signature saved to:", signatureFilePath)
 
 	case "verify":
-		if flag.NArg() < 3 {
-			fmt.Println("Usage: ykey verify <filepath> <filesigpath>")
+		if flag.NArg() < 4 {
+			fmt.Println("Usage: ykey verify <filepath> <filesigpath> <publickeypath>")
 			return
 		}
 
 		filePath := flag.Arg(1)
 		fileSigPath := flag.Arg(2)
+		publicKeyPath := flag.Arg(3)
 
-		publicKeyPath := filepath.Join(keyDir, "public.key")
 		publicKeyBytes, err := ioutil.ReadFile(publicKeyPath)
 		if err != nil {
 			fmt.Println("Error reading public key:", err)
@@ -497,7 +520,7 @@ func HandleEncrypt(filename string) {
 	}
 
 	// Decrypt private key with password
-	decryptedPrivateKey, err := decrypt(privateKeyBytes, getPassword())
+	decryptedPrivateKey, err := decrypt(privateKeyBytes, getPassword(true))
 	if err != nil {
 		fmt.Printf("error decrypting private key: %v\n", err)
 		return
@@ -525,7 +548,7 @@ func HandleDecrypt(filename string) {
 	}
 
 	// Decrypt private key with password
-	decryptedPrivateKey, err := decrypt(privateKeyBytes, getPassword())
+	decryptedPrivateKey, err := decrypt(privateKeyBytes, getPassword(true))
 	if err != nil {
 		fmt.Printf("error decrypting private key: %v\n", err)
 		return
@@ -539,6 +562,51 @@ func HandleDecrypt(filename string) {
 
 func ykeyDirExists() bool {
 	if dirExists(keyDir) {
+		return true
+	} else {
+		return false
+	}
+}
+
+func readFile(filename string) (string, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func writeFile(dir string, dirfile string, data string) error {
+	filePath := filepath.Join(dir, dirfile)
+	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+		return fmt.Errorf("failed to create directories: %v", err)
+	}
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %v", err)
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	if _, err := writer.WriteString(data); err != nil {
+		return fmt.Errorf("failed to write to file: %v", err)
+	}
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("failed to flush writer: %v", err)
+	}
+
+	return nil
+}
+
+func CreateSHA256String(input string) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(input))
+	hash := hasher.Sum(nil)
+	hashstring := hex.EncodeToString(hash)
+	return string(hashstring)
+}
+
+func verifyPassword(pasword string, hashedpasswordstring string) bool {
+	if CreateSHA256String(pasword) == hashedpasswordstring {
 		return true
 	} else {
 		return false

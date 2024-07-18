@@ -3,7 +3,7 @@
 ProjectFileVersion = 1.1
 [General]
 Program name = YKey
-Program version = V3
+Program version = V4
 Windows XP = 0
 Windows Server 2003 = 0
 Windows Vista = 0
@@ -57,7 +57,7 @@ Time = 2
 PlaySound = 0
 Allow = 0
 [Build]
-File = C:\Users\vm\Desktop\YKey V3 Setup.exe
+File = C:\Users\vm\Desktop\YKey V4 Setup.exe
 SetupIconPath = ..\icons\ancient.ico
 UninstallIconPath = ..\icons\ancient.ico
 CompressionMethod = 0
