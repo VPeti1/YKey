@@ -6,7 +6,7 @@ YKey is a command-line tool for key generation, file signing, verification, encr
 
     ykey generate 
     ykey sign <file> 
-    ykey verify <filepath> <filesigpath> 
+    ykey verify <filepath> <filesigpath> <publickeypath>
     ykey encrypt <filename> 
     ykey decrypt <filename>
 
@@ -14,7 +14,7 @@ YKey is a command-line tool for key generation, file signing, verification, encr
 
     generate: Generates cryptographic keys and saves them securely.
     sign <file>: Signs a specified file using HMAC-SHA256.
-    verify <filepath> <filesigpath>: Verifies the signature of a file.
+    verify <filepath> <filesigpath> <publickeypath>: Verifies the signature of a file.
     encrypt <filename>: Encrypts a file using AES encryption.
     decrypt <filename>: Decrypts a file previously encrypted with YKey.
 
